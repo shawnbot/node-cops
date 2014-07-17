@@ -21,7 +21,7 @@ var Operation = function(options) {
 Operation.prototype.call = function(image, callback) {
   var draw = this.draw.bind(this);
   // console.log("Operation.call(", image, ")");
-  return cops.coerceCanvas(image, function(error, canvas) {
+  return cops.loadCanvas(image, function(error, canvas) {
     if (error) return callback(error);
     draw(canvas, callback);
   });
@@ -30,7 +30,7 @@ Operation.prototype.call = function(image, callback) {
 Operation.prototype.apply = function(that, args) {
   var draw = this.draw;
   // console.log("Operation.apply(", image, ")");
-  return cops.coerceCanvas(image, function(error, canvas) {
+  return cops.loadCanvas(image, function(error, canvas) {
     if (error) return callback(error);
     draw.apply(that, args);
   });
@@ -75,14 +75,15 @@ cops.Resize = Operation.extend({
   },
 
   draw: function(canvas, callback) {
-    var image = new Image();
-    image.src = cops.coerceBuffer(canvas);
     var size = this.getSize(canvas);
-    canvas.width = size.width;
-    canvas.height = size.height;
-    canvas.getContext("2d")
-      .drawImage(image, 0, 0, canvas.width, canvas.height);
-    return callback(null, canvas);
+    cops.ctoi(canvas, function(error, image) {
+      if (error) throw error;
+      canvas.width = size.width;
+      canvas.height = size.height;
+      canvas.getContext("2d")
+        .drawImage(image, 0, 0, canvas.width, canvas.height);
+      callback(null, canvas);
+    });
   }
 });
 
@@ -126,93 +127,63 @@ cops.Compose = Operation.extend({
     if (!this.options.image) {
       throw new Error("compose() requires the 'image' option (a Buffer)");
     }
-    this.image = new Image();
-    this.image.src = cops.coerceBuffer(this.options.image);
+    this._loading = false;
+  },
+
+  loadImage: function(callback) {
+    if (this.image) {
+      return callback(null, this.image);
+    } else if (this._loading) {
+      this._callbacks.push(callback);
+    } else {
+      this._loading = true;
+      this._callbacks = [];
+      cops.read(this.options.image, function(error, image) {
+        this.image = image;
+        this._loading = false;
+        callback(null, image);
+        this._callbacks.forEach(function(cb) {
+          cb(null, image);
+        });
+      }.bind(this));
+    }
   },
 
   draw: function(canvas, callback) {
-    var context = canvas.getContext("2d"),
-        overlay = this.image,
-        position = {
-          x: (canvas.width - overlay.width) / 2,
-          y: (canvas.height - overlay.height) / 2
-        };
-    if (this.options.position) {
-      position = cops.resolvePosition(this.options.position, canvas.width, canvas.height);
-    } else if (this.options.gravity) {
-      position = cops.resolveGravity(this.options.gravity, overlay, canvas.width, canvas.height);
-    }
-    context.drawImage(overlay, position.x, position.y);
-    return callback(null, canvas);
+    this.loadImage(function(error, overlay) {
+      var context = canvas.getContext("2d"),
+          position = {
+            x: (canvas.width - overlay.width) / 2,
+            y: (canvas.height - overlay.height) / 2
+          };
+      if (this.options.position) {
+        position = cops.resolvePosition(this.options.position, canvas.width, canvas.height);
+      } else if (this.options.gravity) {
+        position = cops.resolveGravity(this.options.gravity, overlay, canvas.width, canvas.height);
+      }
+      context.drawImage(overlay, position.x, position.y);
+      return callback(null, canvas);
+    }.bind(this));
   }
 });
 
-cops.coerceCanvas = function(image, callback) {
+cops.loadCanvas = function(image, callback) {
+  if (!callback) throw new Error("cops.loadCanvas() must be async!");
+
   var canvas;
   if (image instanceof Canvas) {
-
-    canvas = image;
-
+    return callback(null, image);
   } else if (Buffer.isBuffer(image)) {
-
-    // TODO: stream this shit
-    var img = new Image();
-    img.src = image;
-    return cops.coerceCanvas(img, callback);
-
+    return cops.btoc(image, callback);
   } else if (image instanceof Image) {
-
-    canvas = new Canvas(image.width, image.height);
-    canvas.getContext("2d")
-        .drawImage(image, 0, 0, image.width, image.height);
-
+    return cops.itoc(image, callback);
   } else if (typeof image === "string") {
-
-    if (callback) {
-      return cops.coerceBuffer(image, function(error, buffer) {
-        if (error) return callback(error);
-        cops.coerceCanvas(buffer, callback);
-      });
-    } else {
-      var buffer = cops.coerceBuffer(image);
-      return cops.coerceCanvas(buffer);
-    }
-
-  } else if (image instanceof stream.Stream) {
-    if (callback) {
-      var buffer = [];
-      return image.on("data", function(chunk) {
-        buffer.push(chunk);
-      })
-      .on("end", function() {
-        cops.coerceCanvas(Buffer.concat(buffer), callback);
-      });
-    } else {
-      // coerce the Buffer to a canvas
-      // XXX this is suboptimal, obviously
-      return cops.coerceCanvas(image.read());
-    }
-  } else {
-    return callback && callback("Unable to coerce: " + (typeof image));
+    return cops.read(image, callback);
+  } else if (typeof image === "object") {
+    // XXX check for image.on() so we know it's a stream?
+    return cops.read(image, callback);
   }
-  // console.log("image -> canvas", image, canvas);
-  return callback ? callback(null, canvas) : canvas;
-};
-
-cops.coerceBuffer = function(image, callback) {
-  if (Buffer.isBuffer(image)) {
-    return image;
-  } else if (image instanceof Canvas) {
-    return image.toBuffer(callback);
-  } else if (image instanceof Image) {
-    var canvas = new Canvas(image.width, image.height),
-        context = canvas.getContext("2d");
-    context.drawImage(image, 0, 0, image.width, image.height);
-    return canvas.toBuffer(callback);
-  }
-  return (typeof callback === "function")
-    ? fs.readFile(image, callback)
-    : fs.readFileSync(image);
+  return callback("Unable to load canvas: " + (typeof image));
 };
 
 cops.parseUnits = function(value, relativeTo) {
@@ -281,10 +252,23 @@ cops.pipeline = function(input, output, operations, callback) {
  * cops.read("foo.png", function(error, canvas) {
  * });
  */
-cops.read = function(input, callback) {
-  var read = function(callback) {
-    cops.coerceCanvas(input, callback);
-  };
+cops.read = function(filenameOrStream, callback) {
+  var stream;
+  if (typeof filenameOrStream === "string") {
+    stream = fs.createReadStream(filenameOrStream);
+  } else {
+    stream = filenameOrStream;
+  }
+  function read(callback) {
+    var chunks = [];
+    stream.on("data", function(chunk) {
+      chunks.push(chunk);
+    })
+    .on("end", function() {
+      var buffer = Buffer.concat(chunks);
+      cops.btoc(buffer, callback);
+    });
+  }
   return callback ? read(callback) : read;
 };
 
@@ -342,7 +326,9 @@ cops.write = function(filenameOrStream, optionsOrCanvas, callback) {
       .on("data", function(chunk) {
         out.write(chunk);
       })
-      .on("end", callback);
+      .on("end", function() {
+        callback(null, canvas);
+      });
   };
   return (canvas && callback)
     ? write(canvas, callback)
@@ -462,6 +448,65 @@ cops.hasSignature = function(args, signature) {
     }
   }
   return true;
+};
+
+cops.loadImage = function(image, src, callback) {
+  if (arguments.length === 2) {
+    callback = src;
+    src = null;
+  }
+  if (image.loaded) {
+    return callback(null, image);
+  }
+  image.onerror = function(error) {
+    callback(error, image);
+  };
+  image.onload = function() {
+    callback(null, image);
+  };
+  if (src) image.src = src;
+};
+
+cops.btoc = function(buffer, callback) {
+  // XXX this is async, but loadImage blocks when
+  // setting image.src
+  return cops.loadImage(new Image(), buffer, function(error, image) {
+    if (error) return callback(error);
+    cops.itoc(image, callback);
+  });
+};
+
+cops.itoc = function(image, callback) {
+  // XXX this is synchronous
+  var canvas = new Canvas(image.width, image.height),
+      context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  callback(null, canvas);
+};
+
+cops.ctob = function(canvas, callback) {
+  var chunks = [];
+  return canvas.pngStream()
+    .on("data", function(chunk) {
+      chunks.push(chunk);
+    })
+    .on("end", function() {
+      callback(null, Buffer.concat(chunks));
+    });
+};
+
+cops.ctoi = function(canvas, callback) {
+  cops.ctob(canvas, function(error, buffer) {
+    if (error) throw error;
+    cops.loadImage(new Image, buffer, callback);
+  });
+};
+
+cops.itob = function(image, callback) {
+  cops.itoc(image, function(error, canvas) {
+    if (error) throw error;
+    cops.ctob(canvas, callback);
+  });
 };
 
 function operation(klass) {
