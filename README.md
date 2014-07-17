@@ -26,9 +26,11 @@ helpers for specific tasks:
 var cops = require("cops"),
     shrink = cops.resize("50%");
 
-cops.read("foo.png", function(error, canvas) {
-  shrink(canvas, function(error) {
-    // write canvas to disk
+cops.read("big.png", function(error, canvas) {
+  shrink(canvas, function(error, canvas) {
+    cops.write("small.png", canvas, function(error) {
+      // we're done here
+    });
   });
 });
 ```
@@ -49,3 +51,18 @@ async.waterfall([
   // mic drop
 });
 ```
+
+## Command Line Utility
+The `cops` CLI gives you some nice, node-y tools:
+
+```sh
+# resize images
+$ cops resize big.jpg 50% small.jpg
+$ cat big.jpg | cops resize - 50% > small.jpg
+
+# compose images
+$ cops compose --gravity southeast photo.jpg watermark.png
+```
+
+Run `cops --help` for more information.
+
