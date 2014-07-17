@@ -1,6 +1,6 @@
 {
   "name": "cops",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Composable image operations using node-canvas",
   "main": "index.js",
   "repository": {
@@ -24,8 +24,9 @@
   "dependencies": {
     "async": "^0.9.0",
     "canvas": "^1.1.5",
-    "commander": "^2.3.0",
-    "curry": "^1.2.0",
+    "commander": "^2.3.0"
+  },
+  "devDependencies": {
     "mocha": "^1.20.1"
   }
 }
