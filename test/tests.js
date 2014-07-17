@@ -90,7 +90,7 @@ describe("cops.resize()", function() {
     });
   });
 
-  it("resizes to a fixed size", function(done) {
+  it("resizes to a fixed size (ignoring aspect ratio by default)", function(done) {
     var desiredSize = {
       width: 200,
       height: 200
@@ -105,11 +105,15 @@ describe("cops.resize()", function() {
     });
   });
 
-  it("resizes to a fixed size with letterboxing", function() {
+  it("resizes in letterbox mode", function() {
     // TODO
   });
 
-  it("resizes to a fixed size with preserveAspectRatio", function() {
+  it("resizes in crop mode", function() {
+    // TODO
+  });
+
+  it("resizes in fill mode", function() {
     // TODO
   });
 
