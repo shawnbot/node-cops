@@ -2,13 +2,18 @@
 
 > ![](https://raw.githubusercontent.com/shawnbot/node-cops/master/assets/node-cops.jpg)
 >
-> Original photo by [Quinn Dombrowski](https://www.flickr.com/photos/quinnanya/6668359047/)
+> Original photo by [Quinn Dombrowski](https://www.flickr.com/photos/quinnanya/6668359047/). Sorry.
 
 Cops is an image manipulation suite for Node.js using a
 [Cairo](http://cairographics.org/)-backed
 [Canvas implementation](https://github.com/Automattic/node-canvas). The goal is
 to make common image operations such as resizing, compositing, cropping, and creating
 text overlays as simple and friendly as possible.
+
+**A note on performance:** I've made every attempt to keep things asynchronous
+under the hood, but because node-canvas currently provides
+[no way to asynchronously write Buffers to Images](https://github.com/Automattic/node-canvas/issues/413),
+*reading images is a blocking operation*. I know, bummer.
 
 ## Installation
 Install cops with [npm](http://npmjs.org):
@@ -65,4 +70,3 @@ $ cops compose --gravity southeast photo.jpg watermark.png
 ```
 
 Run `cops --help` for more information.
-
