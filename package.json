@@ -1,0 +1,31 @@
+{
+  "name": "cops",
+  "version": "0.0.0",
+  "description": "Composable image operations using node-canvas",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/shawnbot/node-cops.git"
+  },
+  "bin": {
+    "cops": "bin/cli.js"
+  },
+  "scripts": {
+    "test": "make test"
+  },
+  "keywords": [
+    "image",
+    "canvas",
+    "composite",
+    "draw"
+  ],
+  "author": "Shawn Allen",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "async": "^0.9.0",
+    "canvas": "^1.1.5",
+    "commander": "^2.3.0",
+    "curry": "^1.2.0",
+    "mocha": "^1.20.1"
+  }
+}
