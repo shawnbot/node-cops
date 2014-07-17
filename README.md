@@ -10,10 +10,11 @@ Cops is an image manipulation suite for Node.js using a
 to make common image operations such as resizing, compositing, cropping, and creating
 text overlays as simple and friendly as possible.
 
-**A note on performance:** I've made every attempt to keep things asynchronous
-under the hood, but because node-canvas currently provides
-[no way to asynchronously write Buffers to Images](https://github.com/Automattic/node-canvas/issues/413),
-*reading images is a blocking operation*. I know, bummer.
+**A note on performance:** I've made every attempt to keep I/O buffered and
+asynchronous whenever possible, but because node-canvas currently provides
+[no good way to create an Image from a Buffer](https://github.com/Automattic/node-canvas/issues/413),
+*reading images blocks the thread*. You will probably experience hiccups when loading
+large images.
 
 ## Installation
 Install cops with [npm](http://npmjs.org):
