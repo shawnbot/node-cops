@@ -1,6 +1,6 @@
 # node-cops
 
-> ![](assets/node-cops.jpg)
+> ![](https://raw.githubusercontent.com/shawnbot/node-cops/master/assets/node-cops.jpg)
 >
 > Original photo by [Quinn Dombrowski](https://www.flickr.com/photos/quinnanya/6668359047/)
 
