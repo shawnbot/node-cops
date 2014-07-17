@@ -1,4 +1,6 @@
 var cops = require("../index"),
+    Canvas = cops.Canvas,
+    Image = cops.Image,
     async = require("async"),
     assert = require("assert");
 
@@ -28,7 +30,27 @@ describe("cops.read()", function() {
 });
 
 describe("cops.write()", function() {
-  // TODO
+
+  it("returns an async function with a single argument", function(done) {
+    var write = cops.write("out.png");
+    assert.equal(write.length, 2);
+    write(new Canvas(1, 1), function(error, canvas) {
+      if (error) throw error;
+      cops.read("out.png", function(error, canvas) {
+        if (error) throw error;
+        assert.deepEqual(sizeOf(canvas), {width: 1, height: 1}, "size mismatch");
+        done();
+      });
+    });
+  });
+
+  it("writes a file asynchronously when you provide a callback", function(done) {
+    cops.write("out.png", new Canvas(1, 1), function(error, canvas) {
+      if (error) throw error;
+      assert.deepEqual(sizeOf(canvas), {width: 1, height: 1}, "size mismatch");
+      done();
+    });
+  });
 });
 
 describe("cops.pipeline()", function() {
