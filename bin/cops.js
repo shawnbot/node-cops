@@ -57,6 +57,28 @@ program.command("compose <image> [overlays] [output]")
     });
   });
 
+program.command("entitle <image> <text> [output]")
+  .description("write some text on your image")
+  .option("-f, --font <font>", "The font style, a la CSS: '100px Helvetica', etc.")
+  .option("-c, --color <color>", "The text color, named (e.g. 'green') or hex ('#ffcc00')")
+  .option("-a, --align <align>", "The text alignment: 'left', 'center' or 'right'")
+  .option("-p, --position <position>", "Place the image at a named position (e.g. 'center', 'southeast') or x,y (e.g. '10,20', '50%,75%')")
+  .action(function(image, text, output, options) {
+    var opts = {
+      text: text
+    };
+    if (options.font) opts.font = options.font;
+    if (options.color) opts.fill = options.color;
+    if (options.align) opts.align = options.align;
+    if (options.position) opts.position = options.position;
+    return pipeline(image, output, [
+      cops.entitle(opts)
+    ], function(error) {
+      if (error) return console.error("Error:", error);
+      console.log("done drawing text!");
+    });
+  });
+
 program.parse(process.argv);
 
 function pipeline(input, output, tasks, callback) {

@@ -97,8 +97,8 @@ cops.Resize = Operation.extend({
 cops.Entitle = Operation.extend({
   defaults: {
     font: "50px Helvetica",
-    fillStyle: "#999",
-    textAlign: "center",
+    fill: "#999",
+    align: "center",
     position: "center",
     text: ""
   },
@@ -107,8 +107,8 @@ cops.Entitle = Operation.extend({
     if (!this.options.text) return callback(null, canvas);
     var context = canvas.getContext("2d");
     context.font = this.options.font;
-    context.textAlign = this.options.textAlign;
-    context.fillStyle = this.options.fillStyle;
+    context.textAlign = this.options.align;
+    context.fillStyle = this.options.fill;
     var position = cops.resolvePosition(this.options.position, canvas.width, canvas.height);
     context.fillText(this.options.text, position.x, position.y);
     context.fill();
