@@ -1,6 +1,6 @@
 {
   "name": "cops",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Composable image operations using node-canvas",
   "main": "index.js",
   "repository": {
