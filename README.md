@@ -4,7 +4,7 @@
 >
 > Original photo by [Quinn Dombrowski](https://www.flickr.com/photos/quinnanya/6668359047/). Sorry.
 
-Cops is an image manipulation suite for Node.js using a
+Cops is an image manipulation tool belt for Node.js using a
 [Cairo](http://cairographics.org/)-backed
 [Canvas implementation](https://github.com/Automattic/node-canvas). The goal is
 to make common image operations such as resizing, compositing, cropping, and creating
@@ -25,7 +25,7 @@ $ npm install cops
 
 ## Usage
 The `cops` module exposes both classes and asynchronous
-helpers for specific tasks:
+helpers for specific tasks. Check out the examples below, or refer to the [API documentation](https://github.com/shawnbot/node-cops/wiki/API) for more info.
 
 ### Resize an image
 ```js
