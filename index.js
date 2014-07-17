@@ -17,7 +17,6 @@ var Operation = function(options) {
   this.options = util.extend({}, this.defaults, options);
 };
 
-
 Operation.prototype.call = function(image, callback) {
   var draw = this.draw.bind(this);
   // console.log("Operation.call(", image, ")");
