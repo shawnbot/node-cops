@@ -1,4 +1,9 @@
 # node-cops
+
+> ![](assets/node-cops.jpg)
+>
+> Original photo by [Quinn Dombrowski](https://www.flickr.com/photos/quinnanya/6668359047/)
+
 Cops is an image manipulation suite for Node.js using a
 [Cairo](http://cairographics.org/)-backed
 [Canvas implementation](https://github.com/Automattic/node-canvas). The goal is
@@ -18,9 +23,9 @@ helpers for specific tasks:
 
 ### Resize an image
 ```js
-var cops = require("cops");
+var cops = require("cops"),
+    shrink = cops.resize("50%");
 
-var shrink = cops.resize("50%");
 cops.read("foo.png", function(error, canvas) {
   shrink(canvas, function(error) {
     // write canvas to disk
@@ -38,9 +43,9 @@ var cops = require("cops"),
 
 async.waterfall([
   cops.read("big.png"),
-  cops.resize("50%"),
+  cops.resize({width: 200, height: 200}),
   cops.write("small.png")
 ], function(error, canvas) {
-  // we're done here
+  // mic drop
 });
 ```
