@@ -2,7 +2,8 @@ var cops = require("../index"),
     Canvas = cops.Canvas,
     Image = cops.Image,
     async = require("async"),
-    assert = require("assert");
+    assert = require("assert"),
+    fs = require("fs");
 
 var testFilename = "test/big.png",
     testSize = {width: 500, height: 300};
@@ -31,6 +32,12 @@ describe("cops.read()", function() {
 
 describe("cops.write()", function() {
 
+  var tmpFile = "out.png",
+      cleanup = function() {
+        fs.unlink(tmpFile, function(error) {
+          if (error) console.warn("unable to unlink:", error);
+        });
+      };
   it("returns an async function with a single argument", function(done) {
     var write = cops.write("out.png");
     assert.equal(write.length, 2);
@@ -39,6 +46,7 @@ describe("cops.write()", function() {
       cops.read("out.png", function(error, canvas) {
         if (error) throw error;
         assert.deepEqual(sizeOf(canvas), {width: 1, height: 1}, "size mismatch");
+        cleanup();
         done();
       });
     });
@@ -48,6 +56,7 @@ describe("cops.write()", function() {
     cops.write("out.png", new Canvas(1, 1), function(error, canvas) {
       if (error) throw error;
       assert.deepEqual(sizeOf(canvas), {width: 1, height: 1}, "size mismatch");
+      cleanup();
       done();
     });
   });
