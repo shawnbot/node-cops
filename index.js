@@ -1,6 +1,7 @@
 var fs = require("fs"),
     util = require("./lib/util"),
     events = require("events"),
+    async = require("async"),
     stream = require("stream"),
     Canvas = require("canvas"),
     Image = Canvas.Image;
@@ -244,7 +245,7 @@ cops.draw = operation(cops.Draw);
  */
 cops.pipeline = function(input, output, operations, callback) {
   // allow pipeline(input, operations, output, callback)
-  if (Array.isArray(operations)) {
+  if (Array.isArray(output)) {
     var tmp = operations;
     operations = output;
     output = tmp;
