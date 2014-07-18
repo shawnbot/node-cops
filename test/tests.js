@@ -128,6 +128,41 @@ describe("cops.resize()", function() {
 
 });
 
+describe("cops.draw()", function() {
+
+  it("draws synchronously", function(done) {
+    var draw = cops.draw(function(canvas) {
+      var context = canvas.getContext("2d");
+      context.fillStyle = "#ff0000";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    });
+
+    draw(new Canvas(1, 1), function(error, canvas) {
+      var context = canvas.getContext("2d"),
+          pixels = context.getImageData(0, 0, 1, 1);
+      assert.deepEqual(pixels.data, {0: 255, 1: 0, 2: 0, 3: 255, length: 4});
+      done();
+    });
+  });
+
+  it("draws asynchronously", function(done) {
+    var draw = cops.draw(function(canvas, callback) {
+      var context = canvas.getContext("2d");
+      context.fillStyle = "#00ff00";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      callback(null);
+    });
+
+    draw(new Canvas(1, 1), function(error, canvas) {
+      var context = canvas.getContext("2d"),
+          pixels = context.getImageData(0, 0, 1, 1);
+      assert.deepEqual(pixels.data, {0: 0, 1: 255, 2: 0, 3: 255, length: 4});
+      done();
+    });
+  });
+
+});
+
 describe("cops.compose()", function() {
   // TODO
 });

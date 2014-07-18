@@ -166,6 +166,23 @@ cops.Compose = Operation.extend({
   }
 });
 
+cops.Draw = Operation.extend({
+  initialize: function(draw) {
+    this._draw = draw;
+  },
+
+  draw: function(canvas, callback) {
+    if (this._draw.length === 2) {
+      this._draw(canvas, function(error) {
+        callback(error, canvas);
+      });
+    } else {
+      this._draw(canvas);
+      callback(null, canvas);
+    }
+  }
+});
+
 cops.loadCanvas = function(image, callback) {
   if (!callback) throw new Error("cops.loadCanvas() must be async!");
 
@@ -214,6 +231,7 @@ cops.Operation = Operation;
 cops.resize = operation(cops.Resize);
 cops.compose = operation(cops.Compose);
 cops.entitle = operation(cops.Entitle);
+cops.draw = operation(cops.Draw);
 
 /*
  * Pipeline input through a series of operations, write to output and call a
