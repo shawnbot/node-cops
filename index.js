@@ -18,6 +18,29 @@ var Operation = function(options) {
   this.options = util.extend({}, this.defaults, options);
 };
 
+// throw an error if the draw() method isn't implemented
+Operation.prototype.draw = function(canvas, callback) {
+  throw new Error("Operation#draw() not implemented!");
+};
+
+/*
+ * Apply common options such as alpha and compositing mode to a drawing
+ * context.
+ */
+Operation.prototype.applyContextOptions = function(context) {
+  if (!this.options) return false;
+  if (!isNaN(this.options.alpha)) {
+    context.globalAlpha = this.options.alpha;
+  }
+  if (this.options.mode) {
+    context.globalCompositeOperation = this.options.mode;
+  }
+  return true;
+};
+
+/*
+ * Act like a Function.
+ */
 Operation.prototype.call = function(image, callback) {
   var draw = this.draw.bind(this);
   // console.log("Operation.call(", image, ")");
@@ -27,6 +50,9 @@ Operation.prototype.call = function(image, callback) {
   });
 };
 
+/*
+ * Act like a Function.
+ */
 Operation.prototype.apply = function(that, args) {
   var draw = this.draw;
   // console.log("Operation.apply(", image, ")");
@@ -36,6 +62,22 @@ Operation.prototype.apply = function(that, args) {
   });
 };
 
+/*
+ * Extend the Operation class with:
+ *
+ * var MyOp = Operation.extend({
+ *   // constructor
+ *   initialize: function(options) {
+ *     Operation.call(this, options); // super
+ *   },
+ *
+ *   // this is the only method required by the interface
+ *   draw: function(canvas, callback) {
+ *     // always do this when you're done:
+ *     callback(null, canvas);
+ *   }
+ * });
+ */
 Operation.extend = function(proto) {
   var construct = proto.initialize || Operation,
       op = function(options) {
@@ -100,12 +142,17 @@ cops.Entitle = Operation.extend({
     fill: "#999",
     align: "center",
     position: "center",
-    text: ""
+    text: "",
+    // handled by applyContextOptions()
+    alpha: 1,
+    mode: null
   },
 
   draw: function(canvas, callback) {
     if (!this.options.text) return callback(null, canvas);
     var context = canvas.getContext("2d");
+    // set alpha and composite mode
+    this.applyContextOptions(context);
     context.font = this.options.font;
     context.textAlign = this.options.align;
     context.fillStyle = this.options.fill;
@@ -118,8 +165,8 @@ cops.Entitle = Operation.extend({
 
 cops.Compose = Operation.extend({
   defaults: {
-    mode: null,
-    alpha: 1
+    alpha: 1,
+    mode: null
   },
 
   initialize: function(options) {
@@ -156,6 +203,7 @@ cops.Compose = Operation.extend({
             x: (canvas.width - overlay.width) / 2,
             y: (canvas.height - overlay.height) / 2
           };
+      this.applyContextOptions(context);
       if (this.options.position) {
         position = cops.resolvePosition(this.options.position, canvas.width, canvas.height);
       } else if (this.options.gravity) {
@@ -167,9 +215,25 @@ cops.Compose = Operation.extend({
   }
 });
 
+/*
+ * The Draw class takes a function as its first argument,
+ * and passes off rendering of the canvas to it inside draw().
+ * The rendering function may have either of the following signatures:
+ *
+ * render(canvas) // synchronous
+ * render(canvas, callback) // async
+ *
+ * In either case, `this` is the Draw instance, from which options
+ * can be accessed via `this.options`.
+ */
 cops.Draw = Operation.extend({
-  initialize: function(draw) {
+  // XXX how do we handle options?
+  defaults: {
+  },
+
+  initialize: function(draw, options) {
     this._draw = draw;
+    Operation.call(this, options);
   },
 
   draw: function(canvas, callback) {
@@ -184,6 +248,15 @@ cops.Draw = Operation.extend({
   }
 });
 
+/*
+ * Asynchronously create a canvas from any of the following:
+ *
+ * Canvas: pass through
+ * Buffer: read with cops.btoc()
+ * Image: read with cops.itoc()
+ * Stream: read with cops.read()
+ * String: read with cops.read() (and fs.readFile())
+ */
 cops.loadCanvas = function(image, callback) {
   if (!callback) throw new Error("cops.loadCanvas() must be async!");
 
@@ -203,16 +276,28 @@ cops.loadCanvas = function(image, callback) {
   return callback("Unable to load canvas: " + (typeof image));
 };
 
+/*
+ * Parse a string containing numeric units relative to a numeric value.
+ * Supported formats are:
+ *
+ * Number: pass through the number as a pixel literal
+ * String (n "%"): interpreted as a percentage of the relative value
+ * String (n "px"): interpreted as a pixel literal
+ * String (n): interpreted as a number by coercion
+ */
 cops.parseUnits = function(value, relativeTo) {
   switch (typeof value) {
     case "number":
       return value;
     case "string":
-      if (String(+value) === value) {
-        return +value;
-      }
       var match = value.match(/^(.+)(px|%)$/);
-      if (!match) throw new Error("Invalid units: " + value);
+      if (!match) {
+        var n = +value;
+        if (isNaN(n)) {
+          throw new Error("Invalid unit string: " + value);
+        }
+        return n;
+      }
       var num = +match[1],
           units = match[2];
       if (isNaN(num)) throw new Error("Bad number: " + match[1]);
@@ -353,6 +438,17 @@ cops.write = function(filenameOrStream, optionsOrCanvas, callback) {
     : write;
 };
 
+/*
+ * Create a write stream for the given Canvas and (optional) options.
+ * If options.type is `jpg` or `jpeg`, use the JPEG encoder. Otherwise, encode
+ * as PNG.
+ *
+ * There are no options for the PNG encoder, but the JPEG encoder accepts
+ * some:
+ *
+ * `quality`: quality between 0  and 100
+ * XXX list other options!
+ */
 cops.createWriteStream = function(canvas, options) {
   if (options) {
     switch (options.type.toLowerCase()) {
@@ -368,6 +464,10 @@ cops.createWriteStream = function(canvas, options) {
   return canvas.pngStream(options);
 };
 
+/*
+ * Resolve a position value relative to the given viewport width and height,
+ * and graphic size (any object with `width` and `height` properties).
+ */
 cops.resolvePosition = function(position, width, height, size) {
   if (typeof position === "string") {
 
@@ -400,6 +500,10 @@ cops.resolvePosition = function(position, width, height, size) {
   }
 };
 
+/*
+ * Resolve a "gravity" string for an objet `size` relative to the viewport
+ * width and height.
+ */
 cops.resolveGravity = function(gravity, size, width, height) {
   switch (String(gravity).toLowerCase()) {
     case "west":
@@ -444,6 +548,7 @@ cops.resolveGravity = function(gravity, size, width, height) {
   throw new Error("Unrecognized gravity: '" + gravity + "'");
 };
 
+// XXX use it or lose it
 cops.hasSignature = function(args, signature) {
   for (var i = 0, len = signature.length; i < len; i++) {
     if (args.length < i) return false;
@@ -468,6 +573,9 @@ cops.hasSignature = function(args, signature) {
   return true;
 };
 
+/*
+ * Asynchronously load an image. TODO document
+ */
 cops.loadImage = function(image, src, callback) {
   if (arguments.length === 2) {
     callback = src;
@@ -485,6 +593,7 @@ cops.loadImage = function(image, src, callback) {
   if (src) image.src = src;
 };
 
+// Buffer -> Canvas
 cops.btoc = function(buffer, callback) {
   // XXX this is async, but loadImage blocks when
   // setting image.src
@@ -494,6 +603,7 @@ cops.btoc = function(buffer, callback) {
   });
 };
 
+// Image -> Canvas
 cops.itoc = function(image, callback) {
   // XXX this is synchronous
   var canvas = new Canvas(image.width, image.height),
@@ -502,6 +612,7 @@ cops.itoc = function(image, callback) {
   callback(null, canvas);
 };
 
+// Canvas -> Buffer
 cops.ctob = function(canvas, callback) {
   var chunks = [];
   return canvas.pngStream()
@@ -513,6 +624,7 @@ cops.ctob = function(canvas, callback) {
     });
 };
 
+// Canvas -> Image
 cops.ctoi = function(canvas, callback) {
   cops.ctob(canvas, function(error, buffer) {
     if (error) throw error;
@@ -520,6 +632,7 @@ cops.ctoi = function(canvas, callback) {
   });
 };
 
+// Image -> Buffer
 cops.itob = function(image, callback) {
   cops.itoc(image, function(error, canvas) {
     if (error) throw error;
