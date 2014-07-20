@@ -7,11 +7,14 @@
     "type": "git",
     "url": "git://github.com/shawnbot/node-cops.git"
   },
-  "bin": {
-    "cops": "bin/cli.js"
-  },
   "scripts": {
     "test": "make test"
+  },
+  "bin": {
+    "cops": "bin/cops.js"
+  },
+  "directories": {
+    "example": "examples"
   },
   "keywords": [
     "image",
